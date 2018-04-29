@@ -227,6 +227,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 						// If destination user is online...
 						if (users.get(destinationUser).isOnline()) {
 							// @TODO: notify request
+							// @TODO: guardar en base de datos de todas formas (Antes de notificar)
 
 						} else { // If destination user is offline...
 							database.addRequest(sourceUser, destinationUser);
