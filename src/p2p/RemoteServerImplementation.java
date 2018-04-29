@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 // P2P server implementation
-public class ServerImplementation extends UnicastRemoteObject implements RemoteServerInterface {
+public class RemoteServerImplementation extends UnicastRemoteObject implements RemoteServerInterface {
 
 	// Atributes
 	private HashMap<String, User> users; // User list
@@ -19,7 +19,7 @@ public class ServerImplementation extends UnicastRemoteObject implements RemoteS
 
 	// Métodos
 	// Constructor
-	public ServerImplementation() throws RemoteException, SQLException {
+	public RemoteServerImplementation() throws RemoteException, SQLException {
 		// Instantiate database façade
 		database = new DatabaseFaçade();
 

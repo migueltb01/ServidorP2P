@@ -2,19 +2,10 @@
 package p2p;
 
 // Imports
-import exceptions.FriendNotFoundException;
-import exceptions.IncorrectPasswordException;
-import exceptions.IncorrectSessionException;
-import exceptions.RepeatedFriendshipException;
-import exceptions.RepeatedUsernameException;
-import exceptions.UserNotFoundException;
 import java.net.MalformedURLException;
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 // Main class
 public class Main {
@@ -50,7 +41,7 @@ public class Main {
 
 		try {
 			// Instantiate remote server and start registry
-			ServerImplementation remoteServer = new ServerImplementation();
+			RemoteServerImplementation remoteServer = new RemoteServerImplementation();
 			startRegistry();
 
 			// Register remote server in registry
