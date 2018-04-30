@@ -40,6 +40,8 @@ public class Main {
 		host = "localhost";
 
 		try {
+			System.setSecurityManager(new RMISecurityManager());
+
 			// Instantiate remote server and start registry
 			RemoteServerImplementation remoteServer = new RemoteServerImplementation();
 			startRegistry();
