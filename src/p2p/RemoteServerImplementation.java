@@ -2,10 +2,12 @@
 package p2p;
 
 // Imports
-import database.*;
+
+import database.DatabaseFaçade;
 import exceptions.*;
-import java.rmi.*;
-import java.rmi.server.*;
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,422 +15,429 @@ import java.util.HashMap;
 // P2P server implementation
 public class RemoteServerImplementation extends UnicastRemoteObject implements RemoteServerInterface {
 
-	// Atributes
-	private HashMap<String, User> users; // User list
-	private DatabaseFaçade database; // Database façade
+    // Atributes
+    private HashMap<String, User> users; // User list
+    private DatabaseFaçade database; // Database façade
 
-	// Métodos
-	// Constructor
-	public RemoteServerImplementation() throws RemoteException, SQLException {
-		// Instantiate database façade
-		database = new DatabaseFaçade();
+    // Métodos
+    // Constructor
+    public RemoteServerImplementation() throws RemoteException, SQLException {
+        // Instantiate database façade
+        database = new DatabaseFaçade();
 
-		// Get users from database
-		this.users = database.getUsers();
-	}
+        // Get users from database
+        this.users = database.getUsers();
+    }
 
-	// Register a new user
-	@Override
-	public synchronized void registerUser(String username, String password) throws RepeatedUsernameException,
-		RemoteException,
-		SQLException {
-		// If the user does not exist...
-		if (!users.containsKey(username)) {
+    // Register a new user
+    @Override
+    public synchronized void registerUser(String username, String password) throws RepeatedUsernameException,
+            RemoteException,
+            SQLException {
+        // If the user does not exist...
+        if (!users.containsKey(username)) {
 
-			// Insert user into database
-			database.addUser(username, password);
+            // Insert user into database
+            database.addUser(username, password);
 
-			// Insert user into list
-			users.put(username, new User(username, password));
+            // Insert user into list
+            users.put(username, new User(username, password));
 
-			// Print message
-			System.out.println("\nAdded user " + username + ".");
+            // Print message
+            System.out.println("\nAdded user " + username + ".");
 
-		} else { // Else, throw exception
-			throw new RepeatedUsernameException();
-		}
-	}
+        } else { // Else, throw exception
+            throw new RepeatedUsernameException();
+        }
+    }
 
-	// Delete registered user
-	@Override
-	public synchronized void deleteUser(RemoteClientInterface client, String username, String password) throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		RemoteException,
-		SQLException {
+    // Delete registered user
+    @Override
+    public synchronized void deleteUser(RemoteClientInterface client, String username, String password) throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            RemoteException,
+            SQLException {
 
-		// If the user exists...
-		if (users.containsKey(username)) {
+        // If the user exists...
+        if (users.containsKey(username)) {
 
-			// If the specified password is correct... 
-			if (users.get(username).getPassword().equals(password)) {
+            // If the specified password is correct...
+            if (users.get(username).getPassword().equals(password)) {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(username).getClient().equals(client)) {
-					// Log user out
-					this.logOut(client, username, password);
+                // If the operation has been invoked from the correct client...
+                if (users.get(username).getClient().equals(client)) {
+                    // Log user out
+                    this.logOut(client, username, password);
 
-					// Delete user from database
-					database.deleteUser(username);
+                    // Delete user from database
+                    database.deleteUser(username);
 
-					// Retrieve user to delete
-					User deletedUser = users.get(username);
+                    // Retrieve user to delete
+                    User deletedUser = users.get(username);
 
-					// Unfriend all of their friends
-					for (User friend : deletedUser.getFriends()) {
-						friend.deleteFriend(deletedUser);
-					}
+                    // Unfriend all of their friends
+                    //for (User friend : deletedUser.getFriends()) {
+                    //   friend.deleteFriend(deletedUser);
+                    //}
 
-					users.remove(username); // Delete user from register
+                    users.remove(username); // Delete user from register
 
-					System.out.println("\nDeleted user " + username + "."); // Print message
+                    System.out.println("\nDeleted user " + username + "."); // Print message
 
-				} else { // If the client does not match the user's, throw exception
-					throw new IncorrectSessionException();
-				}
+                } else { // If the client does not match the user's, throw exception
+                    throw new IncorrectSessionException();
+                }
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-		} else { // If user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+        } else { // If user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-	// Log in as specified user through specified client
-	@Override
-	public synchronized ArrayList<String> logIn(String username, String password, RemoteClientInterface client) throws UserNotFoundException,
-		IncorrectPasswordException,
-		RemoteException,
-		SQLException {
+    // Log in as specified user through specified client
+    @Override
+    public synchronized ArrayList<String> logIn(String username, String password, RemoteClientInterface client) throws UserNotFoundException,
+            IncorrectPasswordException,
+            RemoteException,
+            SQLException {
 
-		// If user exists...
-		if (users.containsKey(username)) {
+        // If user exists...
+        if (users.containsKey(username)) {
 
-			// If password is correct...
-			if (users.get(username).getPassword().equals(password)) {
+            // If password is correct...
+            if (users.get(username).getPassword().equals(password)) {
 
-				// If user is logged in...
-				if (users.get(username).getClient() != null) {
-					// @TODO: notify old client that its session will be closed
-				}
+                // If user is logged in...
+                if (users.get(username).getClient() != null) {
+                    // @TODO: notify old client that its session will be closed
+                }
 
-				// Connect user with client
-				users.get(username).connect(client);
+                // Connect user with client
+                users.get(username).connect(client);
 
-				// List of online friends
-				ArrayList<String> onlineFriends = new ArrayList();
+                // List of online friends
+                ArrayList<String> onlineFriends = new ArrayList();
 
-				// Iterate over friends list
-				for (User friend : users.get(username).getFriends()) {
-					// If friend is online, add them to the online friends list
-					if (friend.isOnline()) {
-						onlineFriends.add(friend.getUsername());
-						friend.getClient().notifyOnline(username);
-					}
-				}
+                // Iterate over friends list
+                for (User friend : users.get(username).getFriends()) {
+                    // If friend is online, add them to the online friends list
+                    if (friend.isOnline()) {
+                        onlineFriends.add(friend.getUsername());
+                        friend.getClient().notifyOnline(username);
+                    }
+                }
 
-				// Retrieve list of users who have sent a friend request to this user
-				ArrayList<String> requesters = database.getPendingRequests(username);
+                // Retrieve list of users who have sent a friend request to this user
+                ArrayList<String> requesters = database.getPendingRequestsTo(username);
 
-				// Send requests to the client
-				for (String requester : requesters) {
-					users.get(username).getClient().requestFriendship(requester);
-				}
+                // Send requests to the client
+                for (String requester : requesters) {
+                    users.get(username).getClient().requestFriendship(requester);
+                }
 
-				// Print message
-				System.out.println(username + " has logged in.");
+                // Print message
+                System.out.println(username + " has logged in.");
 
-				return onlineFriends;
+                return onlineFriends;
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-		} else { // If user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+        } else { // If user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-	// Logs specified user out
-	@Override
-	public synchronized void logOut(RemoteClientInterface client, String username, String password) throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		RemoteException {
+    // Logs specified user out
+    @Override
+    public synchronized void logOut(RemoteClientInterface client, String username, String password) throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            RemoteException {
 
-		// If user exists...
-		if (users.containsKey(username)) {
+        // If user exists...
+        if (users.containsKey(username)) {
 
-			// If password is correct...
-			if (users.get(username).getPassword().equals(password)) {
+            // If password is correct...
+            if (users.get(username).getPassword().equals(password)) {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(username).getClient().equals(client)) {
-					// Disconnect user from client
-					users.get(username).desconectar();
+                // If the operation has been invoked from the correct client...
+                if (users.get(username).getClient().equals(client)) {
+                    // Disconnect user from client
+                    users.get(username).desconectar();
                     System.out.println(username + " has logged out.");
 
-                    for(User friend : users.get(username).getFriends()) {
-                    	friend.getClient().notifyOffline(username);
-					}
+                    for (User friend : users.get(username).getFriends()) {
+                        if (friend.isOnline()) {
+                            friend.getClient().notifyOffline(username);
+                        }
+                    }
 
-				} else { // If the operation has been invoked from a different client or the user's not online,
-					// throw exception
-					throw new IncorrectSessionException();
-				}
+                } else { // If the operation has been invoked from a different client or the user's not online,
+                    // throw exception
+                    throw new IncorrectSessionException();
+                }
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-		} else { // If user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+        } else { // If user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-	// Search usernames containing a specific substring
-	@Override
-	public synchronized ArrayList<String> searchUsers(String substring) throws RemoteException {
-		// Instantiate ArrayList that will save search results
-		ArrayList<String> resultados = new ArrayList<>();
+    // Search usernames containing a specific substring
+    @Override
+    public synchronized ArrayList<String> searchUsers(String substring, String username) throws RemoteException {
+        // Instantiate ArrayList that will save search results
+        ArrayList<String> resultados = new ArrayList<>();
 
-		// Iterate over user list
-		for (String nombreUsuario : users.keySet()) {
+        // Iterate over user list
+        for (String nombreUsuario : users.keySet()) {
 
-			// If the current user's username contains the substring, 
-			// add it to search results
-			if (nombreUsuario.contains(substring)) {
-				resultados.add(nombreUsuario);
-			}
-		}
+            // If the current user's username contains the substring,
+            // add it to search results
+            if (nombreUsuario.contains(substring) && !nombreUsuario.equals(username) && !users.get(username).getFriends().contains(nombreUsuario)) {
+                resultados.add(nombreUsuario);
+            }
+        }
 
-		// Return search results
-		return resultados;
-	}
+        // Return search results
+        return resultados;
+    }
 
-	// Invoked by online user to add another user as a friend
-	@Override
-	public synchronized void addFriend(RemoteClientInterface client, String sourceUser, String password, String destinationUser)
-		throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		RepeatedFriendshipException,
-		RemoteException,
-		SQLException {
+    // Invoked by online user to add another user as a friend
+    @Override
+    public synchronized void addFriend(RemoteClientInterface client, String sourceUser, String password, String destinationUser)
+            throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            RepeatedFriendshipException,
+            RemoteException,
+            SQLException {
 
-		// If both users exist...
-		if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
+        // If both users exist...
+        if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
 
-			// If password is correct
-			if (users.get(sourceUser).getPassword().equals(password)) {
+            // If password is correct
+            if (users.get(sourceUser).getPassword().equals(password)) {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(sourceUser).getClient().equals(client)) {
+                // If the operation has been invoked from the correct client...
+                if (users.get(sourceUser).getClient().equals(client)) {
 
-					// If users are not already friends...
-					if (!users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
+                    // If users are not already friends...
+                    if (!users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
 
-						// If destination user is online...
-						if (users.get(destinationUser).isOnline()) {
-							database.addRequest(sourceUser, destinationUser);
-							users.get(destinationUser).getClient().requestFriendship(sourceUser);
+                        ArrayList<String> requesters = database.getPendingRequestsFrom(sourceUser);
+                        ArrayList<String> requested = database.getPendingRequestsTo(destinationUser);
+                        if (!requesters.contains(destinationUser) && !requested.contains(sourceUser)) {
 
-						} else { // If destination user is offline...
-							database.addRequest(sourceUser, destinationUser);
-						}
+                            // If destination user is online...
+                            if (users.get(destinationUser).isOnline()) {
+                                database.addRequest(sourceUser, destinationUser);
+                                users.get(destinationUser).getClient().requestFriendship(sourceUser);
 
-					} else { // If users are already friends, throw exception
-						throw new RepeatedFriendshipException();
-					}
+                            } else { // If destination user is offline...
+                                database.addRequest(sourceUser, destinationUser);
+                            }
+                        }
 
-				} else { // Si client is incorrect, throw exception
-					throw new IncorrectSessionException();
-				}
+                    } else { // If users are already friends, throw exception
+                        throw new RepeatedFriendshipException();
+                    }
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+                } else { // Si client is incorrect, throw exception
+                    throw new IncorrectSessionException();
+                }
 
-		} else { // If one or both of the users do not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-	// Invoked by online user to unfriend another user
-	@Override
-	public synchronized void deleteFriend(RemoteClientInterface client, String sourceUser, String password, String destinationUser)
-		throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		FriendNotFoundException,
-		RemoteException,
-		SQLException {
+        } else { // If one or both of the users do not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-		// If user exists...
-		if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
+    // Invoked by online user to unfriend another user
+    @Override
+    public synchronized void deleteFriend(RemoteClientInterface client, String sourceUser, String password, String destinationUser)
+            throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            FriendNotFoundException,
+            RemoteException,
+            SQLException {
 
-			// If password is correct...
-			if (users.get(sourceUser).getPassword().equals(password)) {
+        // If user exists...
+        if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(sourceUser).getClient().equals(client)) {
+            // If password is correct...
+            if (users.get(sourceUser).getPassword().equals(password)) {
 
-					// If users are friends...
-					if (users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
+                // If the operation has been invoked from the correct client...
+                if (users.get(sourceUser).getClient().equals(client)) {
 
-						// Delete each user from each other's list
-						users.get(sourceUser).deleteFriend(users.get(destinationUser));
+                    // If users are friends...
+                    if (users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
 
-						// Save changes to database
-						database.deleteFriend(sourceUser, destinationUser);
+                        // Delete each user from each other's list
+                        users.get(sourceUser).deleteFriend(users.get(destinationUser));
 
-					} else { // If users are not friends, throw exception
-						throw new FriendNotFoundException();
-					}
+                        // Save changes to database
+                        database.deleteFriend(sourceUser, destinationUser);
 
-				} else { // If client is incorrect, throw exception
-					throw new IncorrectSessionException();
-				}
+                    } else { // If users are not friends, throw exception
+                        throw new FriendNotFoundException();
+                    }
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+                } else { // If client is incorrect, throw exception
+                    throw new IncorrectSessionException();
+                }
 
-		} else { // If user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-	// Invoked by client to confirm or deny friendship to another user
-	@Override
-	public synchronized void resolveRequest(RemoteClientInterface client, String password, String sourceUser, String destinationUser, boolean decision)
-		throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		RemoteException,
-		SQLException {
+        } else { // If user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-		// If user exists...
-		if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
+    // Invoked by client to confirm or deny friendship to another user
+    @Override
+    public synchronized void resolveRequest(RemoteClientInterface client, String password, String sourceUser, String destinationUser, boolean decision)
+            throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            RemoteException,
+            SQLException {
 
-			// If password is correct...
-			if (users.get(destinationUser).getPassword().equals(password)) {
+        // If user exists...
+        if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(destinationUser).getClient().equals(client)) {
+            // If password is correct...
+            if (users.get(destinationUser).getPassword().equals(password)) {
 
-					// True means that the requested user has accepted the request
-					if (decision) {
-						// Add user as friend
-						users.get(destinationUser).addFriend(users.get(sourceUser));
+                // If the operation has been invoked from the correct client...
+                if (users.get(destinationUser).getClient().equals(client)) {
 
-						// Save changes to database
-						database.addFriend(sourceUser, destinationUser);
-					}
+                    // True means that the requested user has accepted the request
+                    if (decision) {
+                        // Add user as friend
+                        users.get(destinationUser).addFriend(users.get(sourceUser));
 
-					// False means that the requested user has denied the request; 
-					// no actions are necessary
-					// Delete request from database
-					database.deleteRequest(sourceUser, destinationUser);
+                        // Save changes to database
+                        database.addFriend(sourceUser, destinationUser);
+                    }
 
-				} else { // If client is incorrect, throw exception
-					throw new IncorrectSessionException();
-				}
+                    // False means that the requested user has denied the request;
+                    // no actions are necessary
+                    // Delete request from database
+                    database.deleteRequest(sourceUser, destinationUser);
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+                } else { // If client is incorrect, throw exception
+                    throw new IncorrectSessionException();
+                }
 
-		} else { // If user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-	// Invoked by an online user to change their password
-	@Override
-	public synchronized void changePassword(RemoteClientInterface client, String username, String oldPassword, String newPassword)
-		throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		RemoteException,
-		SQLException {
+        } else { // If user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-		// If user exists...
-		if (users.containsKey(username)) {
+    // Invoked by an online user to change their password
+    @Override
+    public synchronized void changePassword(RemoteClientInterface client, String username, String oldPassword, String newPassword)
+            throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            RemoteException,
+            SQLException {
 
-			// If password is correct...
-			if (users.get(username).getPassword().equals(oldPassword)) {
+        // If user exists...
+        if (users.containsKey(username)) {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(username).getClient().equals(client)) {
+            // If password is correct...
+            if (users.get(username).getPassword().equals(oldPassword)) {
 
-					// Change password to new password
-					users.get(username).setPassword(newPassword);
-					
-					// Save changes to database
-					database.updatePassword(username, newPassword);
+                // If the operation has been invoked from the correct client...
+                if (users.get(username).getClient().equals(client)) {
 
-				} else { // If the client is incorrect, throw exception
-					throw new IncorrectSessionException();
-				}
+                    // Change password to new password
+                    users.get(username).setPassword(newPassword);
 
-			} else { // If the password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+                    // Save changes to database
+                    database.updatePassword(username, newPassword);
 
-		} else { // If the user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+                } else { // If the client is incorrect, throw exception
+                    throw new IncorrectSessionException();
+                }
 
-	// Invoked by an online user to start a chat with another user
-	@Override
-	public synchronized RemoteClientInterface startChat(RemoteClientInterface client, String sourceUser, String destinationUser, String password)
-		throws UserNotFoundException,
-		IncorrectPasswordException,
-		IncorrectSessionException,
-		FriendNotFoundException,
-		OfflineFriendException,
-		RemoteException {
+            } else { // If the password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
 
-		// If user exists...
-		if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
+        } else { // If the user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 
-			// If password is correct...
-			if (users.get(sourceUser).getPassword().equals(password)) {
+    // Invoked by an online user to start a chat with another user
+    @Override
+    public synchronized RemoteClientInterface startChat(RemoteClientInterface client, String sourceUser, String destinationUser, String password)
+            throws UserNotFoundException,
+            IncorrectPasswordException,
+            IncorrectSessionException,
+            FriendNotFoundException,
+            OfflineFriendException,
+            RemoteException {
 
-				// If the operation has been invoked from the correct client...
-				if (users.get(sourceUser).getClient().equals(client)) {
+        // If user exists...
+        if (users.containsKey(sourceUser) && users.containsKey(destinationUser)) {
 
-					// If users are friends...
-					if (users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
+            // If password is correct...
+            if (users.get(sourceUser).getPassword().equals(password)) {
 
-						// If the destination user is online...
-						if (users.get(destinationUser).isOnline()) {
+                // If the operation has been invoked from the correct client...
+                if (users.get(sourceUser).getClient().equals(client)) {
 
-							// Return reference to source user
-							return users.get(destinationUser).getClient();
+                    // If users are friends...
+                    if (users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
 
-						} else { // If destination user is not online, throw exception
-							throw new OfflineFriendException();
-						}
+                        // If the destination user is online...
+                        if (users.get(destinationUser).isOnline()) {
 
-					} else { // If users are not friends, throw exception
-						throw new FriendNotFoundException();
-					}
+                            // Return reference to source user
+                            return users.get(destinationUser).getClient();
 
-				} else { // If the client is incorrect, throw exception
-					throw new IncorrectSessionException();
-				}
+                        } else { // If destination user is not online, throw exception
+                            throw new OfflineFriendException();
+                        }
 
-			} else { // If password is incorrect, throw exception
-				throw new IncorrectPasswordException();
-			}
+                    } else { // If users are not friends, throw exception
+                        throw new FriendNotFoundException();
+                    }
 
-		} else { // If user does not exist, throw exception
-			throw new UserNotFoundException();
-		}
-	}
+                } else { // If the client is incorrect, throw exception
+                    throw new IncorrectSessionException();
+                }
+
+            } else { // If password is incorrect, throw exception
+                throw new IncorrectPasswordException();
+            }
+
+        } else { // If user does not exist, throw exception
+            throw new UserNotFoundException();
+        }
+    }
 }
