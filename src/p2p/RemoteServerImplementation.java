@@ -166,8 +166,9 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 				if (users.get(username).getClient().equals(client)) {
 					// Disconnect user from client
 					users.get(username).desconectar();
+                    System.out.println(username + " has logged out.");
 
-					// @TODO: notify friends that this user's logging out
+                    // @TODO: notify friends that this user's logging out
 				} else { // If the operation has been invoked from a different client or the user's not online,
 					// throw exception
 					throw new IncorrectSessionException();
