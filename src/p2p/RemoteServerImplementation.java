@@ -65,6 +65,8 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 
 				// If the operation has been invoked from the correct client...
 				if (users.get(username).getClient().equals(client)) {
+					// Log user out
+					this.logOut(client, username, password);
 
 					// Delete user from database
 					database.deleteUser(username);
@@ -123,7 +125,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 					// If friend is online, add them to the online friends list
 					if (friend.isOnline()) {
 						onlineFriends.add(friend.getUsername());
-						// @TODO: friend.getClient.notifyOnline(username);
+						friend.getClient().notifyOnline(username);
 					}
 				}
 
