@@ -64,7 +64,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(username).getPassword().equals(password)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(username).getClient() == client) {
+				if (users.get(username).getClient().equals(client)) {
 
 					// Delete user from database
 					database.deleteUser(username);
@@ -163,7 +163,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(username).getPassword().equals(password)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(username).getClient() == client) {
+				if (users.get(username).getClient().equals(client)) {
 					// Disconnect user from client
 					users.get(username).desconectar();
 
@@ -219,15 +219,15 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(sourceUser).getPassword().equals(password)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(sourceUser).getClient() == client) {
+				if (users.get(sourceUser).getClient().equals(client)) {
 
 					// If users are not already friends...
 					if (!users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
 
 						// If destination user is online...
 						if (users.get(destinationUser).isOnline()) {
+							database.addRequest(sourceUser, destinationUser);
 							// @TODO: notify request
-							// @TODO: guardar en base de datos de todas formas (Antes de notificar)
 
 						} else { // If destination user is offline...
 							database.addRequest(sourceUser, destinationUser);
@@ -267,7 +267,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(sourceUser).getPassword().equals(password)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(sourceUser).getClient() == client) {
+				if (users.get(sourceUser).getClient().equals(client)) {
 
 					// If users are friends...
 					if (users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
@@ -311,7 +311,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(destinationUser).getPassword().equals(password)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(destinationUser).getClient() == client) {
+				if (users.get(destinationUser).getClient().equals(client)) {
 
 					// True means that the requested user has accepted the request
 					if (decision) {
@@ -356,7 +356,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(username).getPassword().equals(oldPassword)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(username).getClient() == client) {
+				if (users.get(username).getClient().equals(client)) {
 
 					// Change password to new password
 					users.get(username).setPassword(newPassword);
@@ -394,7 +394,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 			if (users.get(sourceUser).getPassword().equals(password)) {
 
 				// If the operation has been invoked from the correct client...
-				if (users.get(sourceUser).getClient() == client) {
+				if (users.get(sourceUser).getClient().equals(client)) {
 
 					// If users are friends...
 					if (users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
