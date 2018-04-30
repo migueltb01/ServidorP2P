@@ -173,7 +173,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
                     for(User friend : users.get(username).getFriends()) {
                     	friend.getClient().notifyOffline(username);
 					}
-					
+
 				} else { // If the operation has been invoked from a different client or the user's not online,
 					// throw exception
 					throw new IncorrectSessionException();
