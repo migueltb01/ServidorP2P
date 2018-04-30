@@ -134,7 +134,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 
 				// Send requests to the client
 				for (String requester : requesters) {
-					// @TODO: users.get(username).getClient().requestFriendship(requester); 
+					users.get(username).getClient().requestFriendship(requester);
 				}
 
 				// Print message
@@ -170,7 +170,10 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 					users.get(username).desconectar();
                     System.out.println(username + " has logged out.");
 
-                    // @TODO: notify friends that this user's logging out
+                    for(User friend : users.get(username).getFriends()) {
+                    	friend.getClient().notifyOffline(username);
+					}
+					
 				} else { // If the operation has been invoked from a different client or the user's not online,
 					// throw exception
 					throw new IncorrectSessionException();
@@ -230,7 +233,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 						// If destination user is online...
 						if (users.get(destinationUser).isOnline()) {
 							database.addRequest(sourceUser, destinationUser);
-							// @TODO: notify request
+							users.get(destinationUser).getClient().requestFriendship(sourceUser);
 
 						} else { // If destination user is offline...
 							database.addRequest(sourceUser, destinationUser);
