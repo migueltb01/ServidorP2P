@@ -125,7 +125,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 					// If friend is online, add them to the online friends list
 					if (friend.isOnline()) {
 						onlineFriends.add(friend.getUsername());
-						// @TODO: friend.getClient.notifyOnline(username);
+						friend.getClient().notifyOnline(username);
 					}
 				}
 
