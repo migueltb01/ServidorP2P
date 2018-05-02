@@ -63,8 +63,12 @@ public class DatabaseFaçade {
 	}
 
 	// Get pending requests for the specified user and return a list of the requesters' usernames
-	public ArrayList<String> getPendingRequests(String user) throws SQLException {
-		return requestsDAO.getPendingRequests(user);
+	public ArrayList<String> getPendingRequestsTo(String user) throws SQLException {
+		return requestsDAO.getPendingRequestsTo(user);
+	}
+
+	public ArrayList<String> getPendingRequestsFrom(String user) throws SQLException {
+		return requestsDAO.getPendingRequestsFrom(user);
 	}
 
 	// Add request

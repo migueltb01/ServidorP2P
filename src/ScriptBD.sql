@@ -15,6 +15,8 @@ create table friends (
             on delete cascade
             on update cascade,
 	foreign key (username2) references users (username)
+	on delete cascade
+	on update cascade
 );
 
 create table pendingrequests (

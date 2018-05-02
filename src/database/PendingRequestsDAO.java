@@ -16,7 +16,7 @@ public class PendingRequestsDAO extends AbstractDAO {
 	}
 
 	// Get pending requests for the specified user and return a list of the requesters' usernames
-	public ArrayList<String> getPendingRequests(String user) throws SQLException {
+	public ArrayList<String> getPendingRequestsTo(String user) throws SQLException {
 		// Instantiate ArrayList
 		ArrayList<String> requesters = new ArrayList<>();
 
@@ -33,6 +33,29 @@ public class PendingRequestsDAO extends AbstractDAO {
 		while (resultSet.next()) {
 			// Add user to user list
 			requesters.add(resultSet.getString("requesterUser"));
+		}
+
+		// Return list
+		return requesters;
+	}
+
+	public ArrayList<String> getPendingRequestsFrom(String user) throws SQLException {
+		// Instantiate ArrayList
+		ArrayList<String> requesters = new ArrayList<>();
+
+		// Prepare query
+		PreparedStatement statement = connection.prepareStatement("select * from pendingRequests where requesterUser = ?;");
+
+		// Set parameters
+		statement.setString(1, user);
+
+		// Execute query
+		ResultSet resultSet = statement.executeQuery();
+
+		// While we don't reach the end of the results...
+		while (resultSet.next()) {
+			// Add user to user list
+			requesters.add(resultSet.getString("requestedUser"));
 		}
 
 		// Return list
