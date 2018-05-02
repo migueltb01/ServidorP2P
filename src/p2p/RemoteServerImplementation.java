@@ -194,7 +194,7 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 
     // Search usernames containing a specific substring
     @Override
-    public synchronized ArrayList<String> searchUsers(String substring, String username) throws RemoteException {
+    public synchronized ArrayList<String> searchUsers(String substring, String username) throws RemoteException, SQLException {
         // Instantiate ArrayList that will save search results
         ArrayList<String> resultados = new ArrayList<>();
 
@@ -203,8 +203,14 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 
             // If the current user's username contains the substring,
             // add it to search results
-            if (nombreUsuario.contains(substring) && !nombreUsuario.equals(username) && !users.get(username).getFriends().contains(nombreUsuario)) {
-                resultados.add(nombreUsuario);
+            if (nombreUsuario.contains(substring) && !nombreUsuario.equals(username) && !users.get(username).getFriends().contains(users.get(nombreUsuario))) {
+
+                ArrayList<String> requesters = database.getPendingRequestsFrom(username);
+                ArrayList<String> requested = database.getPendingRequestsFrom(nombreUsuario);
+
+                if (!requesters.contains(nombreUsuario) && !requested.contains(username)) {
+                    resultados.add(nombreUsuario);
+                }
             }
         }
 
@@ -235,7 +241,8 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
                     if (!users.get(sourceUser).getFriends().contains(users.get(destinationUser))) {
 
                         ArrayList<String> requesters = database.getPendingRequestsFrom(sourceUser);
-                        ArrayList<String> requested = database.getPendingRequestsTo(destinationUser);
+                        ArrayList<String> requested = database.getPendingRequestsFrom(destinationUser);
+
                         if (!requesters.contains(destinationUser) && !requested.contains(sourceUser)) {
 
                             // If destination user is online...
@@ -335,6 +342,13 @@ public class RemoteServerImplementation extends UnicastRemoteObject implements R
 
                         // Save changes to database
                         database.addFriend(sourceUser, destinationUser);
+
+                        User friend = users.get(destinationUser);
+                        User user = users.get(sourceUser);
+                        if (friend.isOnline()) {
+                            user.getClient().notifyOnline(destinationUser);
+                            friend.getClient().notifyOnline(sourceUser);
+                        }
                     }
 
                     // False means that the requested user has denied the request;
